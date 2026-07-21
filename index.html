@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BootPilot</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#fff;max-width:700px;margin:auto;padding:20px}
+.card{background:#222;padding:15px;border-radius:12px;margin-bottom:15px}
+input,button{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:none}
+button{background:#0a84ff;color:#fff;font-weight:bold}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid #444;padding:8px;text-align:center}
+.small{color:#aaa;font-size:.9em}
+</style>
+</head>
+<body>
+<h1>🚤 BootPilot</h1>
+
+<div class="card">
+<label>Tankinhalt (Liter)</label>
+<input id="tank" type="number" step="0.1" value="25">
+
+<label>Gefahrene Kilometer</label>
+<input id="km" type="number" step="0.1">
+
+<label>Verbrauch (l/100 km)</label>
+<input id="cons" type="number" step="0.1" value="8">
+
+<button onclick="saveTrip()">Fahrt speichern</button>
+</div>
+
+<div class="card">
+<h3>Auswertung</h3>
+<p>Verbrauchte Liter: <b id="used">0.00</b></p>
+<p>Resttank: <b id="left">0.00</b> l</p>
+<p>Restreichweite: <b id="range">0</b> km</p>
+</div>
+
+<div class="card">
+<h3>Fahrtenbuch</h3>
+<table>
+<thead>
+<tr><th>Datum</th><th>km</th><th>Liter</th></tr>
+</thead>
+<tbody id="log"></tbody>
+</table>
+<button onclick="clearLog()">Fahrtenbuch löschen</button>
+</div>
+
+<script>
+let trips=JSON.parse(localStorage.getItem("bootpilot")||"[]");
+
+function render(){
+ const log=document.getElementById("log");
+ log.innerHTML="";
+ trips.forEach(t=>{
+   log.innerHTML+=`<tr><td>${t.date}</td><td>${t.km}</td><td>${t.liters.toFixed(2)}</td></tr>`;
+ });
+}
+
+function saveTrip(){
+ const tank=parseFloat(document.getElementById("tank").value)||0;
+ const km=parseFloat(document.getElementById("km").value)||0;
+ const cons=parseFloat(document.getElementById("cons").value)||0;
+
+ const liters=km*cons/100;
+ const left=Math.max(0,tank-liters);
+ const range=cons>0?(left/cons*100):0;
+
+ document.getElementById("used").textContent=liters.toFixed(2);
+ document.getElementById("left").textContent=left.toFixed(2);
+ document.getElementById("range").textContent=Math.round(range);
+
+ trips.unshift({
+   date:new Date().toLocaleString("de-DE"),
+   km:km,
+   liters:liters
+ });
+ localStorage.setItem("bootpilot",JSON.stringify(trips));
+ render();
+}
+
+function clearLog(){
+ if(confirm("Fahrtenbuch löschen?")){
+   trips=[];
+   localStorage.removeItem("bootpilot");
+   render();
+ }
+}
+render();
+</script>
+</body>
+</html>
