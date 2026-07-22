@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BootPilot</title>
+<style>
+body{margin:0;font-family:system-ui;background:#0f172a;color:#fff}
+.wrap{max-width:760px;margin:auto;padding:16px}
+.card{background:#1e293b;border-radius:14px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.value{font-size:34px;font-weight:bold}.card h2{margin-top:0}.card{box-shadow:0 4px 14px rgba(0,0,0,.25);transition:.2s}.card:hover{transform:translateY(-2px)}
+input,button{width:100%;padding:12px;margin-top:8px;border-radius:10px;border:0}
+button{background:#2563eb;color:#fff;font-weight:bold}
+.bar{height:18px;background:#334155;border-radius:999px;overflow:hidden}.fill{height:100%;background:#22c55e;width:100%}
+.trip{padding:10px;border-top:1px solid #475569}
+.small{color:#cbd5e1}
+</style></head><body><div class="wrap">
+<h1>🚤 BootPilot</h1>
+<div class="grid">
+<div class="card"><div>Tank</div><div class="value"><span id=tank></span> l</div></div>
+<div class="card"><div>Reichweite</div><div class="value"><span id=range></span> km</div></div>
+<div class="card"><div>Gesamt-km</div><div class="value"><span id=tkm></span></div></div>
+<div class="card"><div>Verbrauch</div><div class="value"><span id=tf></span> l</div></div>
+<div class="card"><div>Fahrten</div><div class="value"><span id=tc></span></div></div>
+<div class="card"><div>Ø km/Fahrt</div><div class="value"><span id=avgkm></span></div></div>
+<div class="card"><div>Tankfüllung</div><div class="value"><span id=tankpct></span>%</div></div>
+<div class="card"><div>Restinhalt</div><div class="value"><span id=litersleft></span> l</div></div>
+<div class="card"><div>Boot-Status</div><div class="value" style="font-size:22px"><span id=tripstatus></span></div></div>
+<div class="card"><div>Reserve</div><div id=reserveinfo class="small"></div></div>
+</div>
+<div class="card"><div class="bar"><div id=fill class="fill"></div></div><div id=status></div></div>
+<div class="card">
+<h2>Neue Fahrt</h2>
+<input id=km type=number placeholder="Gefahrene Kilometer">
+<button onclick="saveTrip()">Fahrt speichern</button>
+</div>
+<div class="card">
+<h2>Einstellungen</h2>
+<label>Tankgröße</label><input id=tankSize type=number step=.1>
+<label>Tankinhalt</label><input id=tankNow type=number step=.1>
+<label>Verbrauch l/100 km</label><input id=cons type=number step=.1>
+<label>Reserve</label><input id=res type=number step=.1>
+<button onclick="saveSettings()">Speichern</button>
+<button onclick="fullTank()">⛽ Tank voll</button>
+<button onclick="resetAll()">🗑️ Alle Daten löschen</button>
+</div>
+<div class="card"><h2>Statistik</h2><div id="statsblock" class="small"></div></div>
+<div class="card"><h2>Letzte Fahrt</h2><div id=lasttrip class="small">Noch keine Fahrt gespeichert.</div></div>
+<div class="card"><h2>Fahrtenbuch</h2><div id=list></div></div>
+</div>
+<script>
+const DEF={tankSize:24,tank:24,cons:10.3,res:3,totalKm:0,totalFuel:0,trips:[]};
+let d=JSON.parse(localStorage.getItem("bootpilot")||"null")||structuredClone(DEF);
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("bootpilot",JSON.stringify(d))}
+function rng(){return Math.max(0,Math.floor(((d.tank-d.res)/d.cons)*100))}
+function render(){
+$("tank").textContent=d.tank.toFixed(1);$("range").textContent=rng();
+$("tkm").textContent=d.totalKm.toFixed(1);$("tf").textContent=d.totalFuel.toFixed(1);$("tc").textContent=d.trips.length;$("avgkm").textContent=d.trips.length?(d.totalKm/d.trips.length).toFixed(1):"0.0";$("tankpct").textContent=((d.tank/d.tankSize)*100).toFixed(0);$("litersleft").textContent=d.tank.toFixed(1);$("tripstatus").textContent=rng()>100?"🚤 Bereit für die nächste Tour":rng()>40?"⛽ Tour möglich":"⚠️ Nachtanken empfohlen";$("reserveinfo").textContent="Reserve: "+d.res.toFixed(1)+" l • Verfügbar: "+Math.max(0,d.tank-d.res).toFixed(1)+" l";
+$("tankSize").value=d.tankSize;$("tankNow").value=d.tank.toFixed(1);$("cons").value=d.cons;$("res").value=d.res;
+let p=Math.max(0,Math.min(100,d.tank/d.tankSize*100));$("fill").style.width=p+"%";
+$("fill").style.background=p>50?"#22c55e":p>25?"#f59e0b":"#ef4444";
+$("status").textContent=p>50?"🟢 Alles ok":p>25?"🟡 Nachtanken planen":"🔴 Tanken";
+$("statsblock").innerHTML=`Fahrten: ${d.trips.length}<br>Gesamt-km: ${d.totalKm.toFixed(1)} km<br>Gesamtverbrauch: ${d.totalFuel.toFixed(2)} l<br>Ø km/Fahrt: ${d.trips.length?(d.totalKm/d.trips.length).toFixed(1):"0.0"} km`;$("lasttrip").innerHTML=d.trips.length?`📅 ${d.trips[0].date}<br>📏 ${d.trips[0].km} km<br>⛽ ${d.trips[0].l.toFixed(2)} l`:"Noch keine Fahrt gespeichert.";$("list").innerHTML=d.trips.length?d.trips.map((t,i)=>`<div class=trip><b>${t.date}</b><br>${t.km} km • ${t.l.toFixed(2)} l • Tank ${t.tank.toFixed(1)} l <button onclick="delTrip(${i})">Löschen</button></div>`).join(""):"<div class=small>Noch keine Fahrten.</div>";
+save();
+}
+function saveTrip(){
+let km=+$("km").value;if(!(km>0))return alert("Kilometer eingeben");
+let l=km*d.cons/100;if(l>d.tank)return alert("Zu wenig Kraftstoff");
+d.tank-=l;d.totalKm+=km;d.totalFuel+=l;
+d.trips.unshift({date:new Date().toLocaleString(),km,l,tank:d.tank});
+alert("Fahrt gespeichert");
+$("km").value="";render();
+}
+function delTrip(i){if(confirm("Eintrag löschen?")){d.trips.splice(i,1);render();}}
+function saveSettings(){
+d.tankSize=Math.max(1,+$("tankSize").value);
+d.tank=Math.min(d.tankSize,Math.max(0,+$("tankNow").value));
+d.cons=Math.max(.1,+$("cons").value);
+d.res=Math.max(0,+$("res").value);
+render();
+}
+function fullTank(){d.tank=d.tankSize;render();}
+function resetAll(){if(confirm("Alle Daten löschen?")){d=structuredClone(DEF);render();}}
+render();
+document.body.insertAdjacentHTML("beforeend","<div style=\"text-align:center;color:#94a3b8;padding:16px\">BootPilot Version 1.0 RC1</div>");</script></body></html>
