@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BootPilot</title>
+<style>
+body{margin:0;font-family:system-ui;background:linear-gradient(180deg,#0f172a,#172554);color:#fff}
+.wrap{max-width:760px;margin:auto;padding:18px}
+.card{background:#1e293b;border-radius:20px;padding:20px;margin:14px 0;box-shadow:0 10px 24px rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.06)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;align-items:stretch}
+.value{font-size:46px;font-weight:bold;line-height:1.05;text-shadow:0 2px 8px rgba(0,0,0,.2)}.card h2{margin:0 0 10px 0;font-size:22px}.card{box-shadow:0 4px 14px rgba(0,0,0,.25);transition:.2s}.card:hover{transform:translateY(-2px)}
+input,button{width:100%;padding:14px;margin-top:10px;border-radius:14px;border:0;font-size:16px}
+button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;transition:.2s}button:hover{filter:brightness(1.08)}button:active{transform:scale(.98)}
+.bar{height:24px;background:#334155;border-radius:999px;overflow:hidden;border:1px solid #475569}.fill{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);width:100%;transition:width .4s ease}
+.trip{display:flex;flex-direction:column;gap:8px;border-left:5px solid #3b82f6;background:rgba(255,255,255,.04);padding:16px;border-radius:16px;box-shadow:0 8px 18px rgba(0,0,0,.20);margin-bottom:12px;padding:12px;margin:10px 0;background:#273449;border-radius:12px;border:1px solid #475569}
+.small{color:#cbd5e1}
+
+.trip-meta{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;margin-top:8px}
+.trip-meta div{background:rgba(255,255,255,.05);padding:10px;border-radius:10px}
+
+
+.timeline-card{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  padding:16px;
+  margin:14px 0;
+  background:rgba(255,255,255,.04);
+}
+.timeline-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+  font-weight:bold;
+}
+
+</style></head><body><div class="wrap">
+<h1>🚤 BootPilot</h1><div style='display:flex;justify-content:space-between;align-items:center;margin:6px 0 14px;color:#cbd5e1'><span>Dashboard 2.0 • Finale</span><span>🟢 Boot einsatzbereit</span></div><div style='color:#93c5fd;font-size:14px;margin-top:-8px;margin-bottom:10px'>BootPilot Plus · Übersicht für jede Tour</div><div class='card'><h2>Tagesübersicht</h2><div class='small'>Tank, Reichweite und Fahrten auf einen Blick.</div></div><p style='margin-top:-8px;color:#cbd5e1'>Heute im Überblick</p><div class="card"><b>Willkommen an Bord</b><div class="small">Tank, Reichweite und Fahrten immer im Blick.</div></div>
+<div class="grid">
+<div class="card" style="grid-column:span 2"><div style="color:#93c5fd">⛽ Tank</div><div class="value"><span id=tank></span> l</div></div>
+<div class="card" style="grid-column:span 2"><div style="color:#86efac">📍 Reichweite</div><div class="value"><span id=range></span> km</div></div>
+<div class="card"><div>Gesamt-km</div><div class="value"><span id=tkm></span></div></div>
+<div class="card"><div>Verbrauch</div><div class="value"><span id=tf></span> l</div></div>
+<div class="card"><div>Fahrten</div><div class="value"><span id=tc></span></div></div>
+<div class="card"><div>Ø km/Fahrt</div><div class="value"><span id=avgkm></span></div></div>
+<div class="card"><div>Tankfüllung</div><div class="value"><span id=tankpct></span>%</div></div>
+<div class="card"><div>Restinhalt</div><div class="value"><span id=litersleft></span> l</div></div>
+<div class="card"><div>Boot-Status</div><div class="value" style="font-size:22px"><span id=tripstatus></span></div></div>
+<div class="card"><div>Reserve</div><div id=reserveinfo class="small"></div></div>
+</div><div class="card" style="background:linear-gradient(135deg,#14532d,#166534);border:1px solid rgba(255,255,255,.08)">
+<h2 style="margin:0 0 8px">🚤 Aktueller Status</h2>
+<div style="font-size:18px">🟢 Alle Systeme bereit · Tank, Reichweite und Statistik auf einen Blick.</div>
+</div>
+<h2 style="margin:18px 0 8px">Status & Statistik</h2>
+<div class="card"><div class="bar"><div id=fill class="fill"></div></div><div id=status></div></div>
+<div class="card">
+<h2>Schnellstart</h2><div class='small'>1. Kilometer eingeben · 2. Fahrt speichern · 3. BootPilot berechnet den Rest automatisch.</div></div><div class='card'><h2>Neue Fahrt</h2>
+<input id=km type=number placeholder="Gefahrene Kilometer">
+<button onclick="saveTrip()">Fahrt speichern</button>
+</div>
+<div class="card">
+<h2>Einstellungen</h2>
+<label>Tankgröße</label><input id=tankSize type=number step=.1>
+<label>Tankinhalt</label><input id=tankNow type=number step=.1>
+<label>Verbrauch l/100 km</label><input id=cons type=number step=.1>
+<label>Reserve</label><input id=res type=number step=.1>
+<button onclick="saveSettings()">Speichern</button>
+<button onclick="fullTank()">⛽ Tank voll</button>
+<button onclick="resetAll()">🗑️ Alle Daten löschen</button>
+</div>
+<div class="card"><h2>Statistik</h2><div id="statsblock" class="small"></div></div>
+<div class="card"><h2>Status der letzten Fahrt</h2><div id=lasttrip class="small">Noch keine Fahrt gespeichert.</div></div>
+<div class="card"><h2>📖 Fahrtenbuch 2.0
+
+<div class="timeline-card">
+  <div class="timeline-header">
+    <span>🚤 Vorschau der neuen Logbuch-Karten</span>
+    <span>Neu</span>
+  </div>
+  <div class="trip-meta">
+    <div><strong>📅 Tour</strong><br>Datum & Uhrzeit</div>
+    <div><strong>📍 Strecke</strong><br>Gefahrene Kilometer</div>
+    <div><strong>⛽ Tank</strong><br>Verbrauch & Resttank</div>
+    <div><strong>🧭 Reichweite</strong><br>Verbleibende km</div>
+  </div>
+</div>
+
+<div class='card' style='border-left:5px solid #0ea5e9'><strong>🚤 Logbuch 2.2</strong><br><span style='color:#cbd5e1'>Jede Tour wird als übersichtliche Logbuch-Karte dargestellt. Wichtige Daten sind schneller erfassbar.</span></div>
+
+<div class="card" style="display:flex;justify-content:space-around;gap:12px;text-align:center">
+  <div><strong>📖 Fahrtenbuch-Übersicht</strong><br><small>Alle Touren auf einen Blick</small></div>
+  <div>🚤 <strong>Chronologisch</strong></div>
+  <div>📊 <strong>Übersichtlich</strong></div>
+</div>
+</h2><div class='card' style='margin-top:10px'><strong>Touren-Timeline</strong><br><span style='color:#cbd5e1'>Alle Fahrten chronologisch und übersichtlich dargestellt.</span></div></h2><div id=list></div></div>
+</div>
+<script>
+const DEF={tankSize:24,tank:24,cons:10.3,res:3,totalKm:0,totalFuel:0,trips:[]};
+let d=JSON.parse(localStorage.getItem("bootpilot")||"null")||structuredClone(DEF);
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("bootpilot",JSON.stringify(d))}
+function rng(){return Math.max(0,Math.floor(((d.tank-d.res)/d.cons)*100))}
+function render(){
+$("tank").textContent=d.tank.toFixed(1);$("range").textContent=rng();
+$("tkm").textContent=d.totalKm.toFixed(1);$("tf").textContent=d.totalFuel.toFixed(1);$("tc").textContent=d.trips.length;$("avgkm").textContent=d.trips.length?(d.totalKm/d.trips.length).toFixed(1):"0.0";$("tankpct").textContent=((d.tank/d.tankSize)*100).toFixed(0);$("litersleft").textContent=d.tank.toFixed(1);$("tripstatus").textContent=rng()>100?"🚤 Bereit für die nächste Tour":rng()>40?"⛽ Tour möglich":"⚠️ Nachtanken empfohlen";$("reserveinfo").textContent="Reserve: "+d.res.toFixed(1)+" l • Verfügbar: "+Math.max(0,d.tank-d.res).toFixed(1)+" l";
+$("tankSize").value=d.tankSize;$("tankNow").value=d.tank.toFixed(1);$("cons").value=d.cons;$("res").value=d.res;
+let p=Math.max(0,Math.min(100,d.tank/d.tankSize*100));$("fill").style.width=p+"%";
+$("fill").style.background=p>50?"#22c55e":p>25?"#f59e0b":"#ef4444";
+$("status").textContent=p>50?"🟢 Alles ok":p>25?"🟡 Nachtanken planen":"🔴 Tanken";
+$("statsblock").innerHTML=`Fahrten: ${d.trips.length}<br>Gesamt-km: ${d.totalKm.toFixed(1)} km<br>Gesamtverbrauch: ${d.totalFuel.toFixed(2)} l<br>Ø km/Fahrt: ${d.trips.length?(d.totalKm/d.trips.length).toFixed(1):"0.0"} km`;$("lasttrip").innerHTML=d.trips.length?`📅 ${d.trips[0].date}<br>📏 ${d.trips[0].km} km<br>⛽ ${d.trips[0].l.toFixed(2)} l`:"Noch keine Fahrt gespeichert.";$("list").innerHTML=d.trips.length?d.trips.map((t,i)=>`<div class=trip><b>${t.date}</b><br>${t.km} km • ${t.l.toFixed(2)} l • Tank ${t.tank.toFixed(1)} l <button onclick="delTrip(${i})">Löschen</button></div>`).join(""):"<div class=small>Noch keine Fahrten.</div>";
+save();
+}
+function saveTrip(){
+let km=+$("km").value;if(!(km>0))return alert("Kilometer eingeben");
+let l=km*d.cons/100;if(l>d.tank)return alert("Zu wenig Kraftstoff");
+d.tank-=l;d.totalKm+=km;d.totalFuel+=l;
+d.trips.unshift({date:new Date().toLocaleString(),km,l,tank:d.tank});
+alert("Fahrt gespeichert");
+$("km").value="";render();
+}
+function delTrip(i){if(confirm("Eintrag löschen?")){d.trips.splice(i,1);d.totalKm=d.trips.reduce((a,t)=>a+Number(t.km),0);d.totalFuel=d.trips.reduce((a,t)=>a+Number(t.l),0);render();}}
+function saveSettings(){
+d.tankSize=Math.max(1,+$("tankSize").value);
+d.tank=Math.min(d.tankSize,Math.max(0,+$("tankNow").value));
+d.cons=Math.max(.1,+$("cons").value);
+d.res=Math.max(0,+$("res").value);
+render();
+}
+function fullTank(){d.tank=d.tankSize;render();}
+function resetAll(){if(confirm("Alle Daten löschen?")){d=structuredClone(DEF);render();}}
+render();
+document.body.insertAdjacentHTML("beforeend","<div style=\"text-align:center;color:#94a3b8;padding:16px\">BootPilot 2.2 Final</div>");</script></body></html>
